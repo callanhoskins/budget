@@ -40,11 +40,12 @@ budget <-
     "Charity", 1e3, 
     "Rent", 21.6e3, 
     "Savings", 5e3, 
-    "Stocks", 20e3, 
+    "Investments", 20e3, 
     "General", 11.4e3, 
     "Utilities", 2520, 
     "Travel", 3.6e3, 
-    "Healthcare", 1e3
+    "Healthcare", 1e3, 
+    "Taxes", 43e3
   ) %>% 
   mutate(weekly = yearly / 52, monthly = yearly / 12)
 ```
@@ -69,6 +70,9 @@ last_date <-
   debits %>% 
   pull(post_date) %>% 
   max()
+
+debits %>% 
+  filter(is.na(category))
 
 weeks_elapsed <- as.double(difftime(last_date, first_date, units = "weeks"))
 
