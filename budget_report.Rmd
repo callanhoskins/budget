@@ -160,19 +160,19 @@ last_month %>%
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 ```{r}
-# The label function is no longer correct
-label_month <- function(month) {
-  str_c(month, "-", today() %>% year())
-}
-
 debits %>% 
-  mutate(month = post_date %>% month()) %>% 
-  group_by(month, category) %>% 
+  mutate(mon = 
+           post_date %>% 
+           floor_date(unit = "month") %>% 
+           as.Date(format(mon, "%d-%m-%Y"), format = "%d-%m-%Y")
+  ) %>% 
+  group_by(mon, category) %>% 
   summarize(spending = sum(debit)) %>% 
-  ggplot(aes(month, spending, color=category)) + 
+  mutate(mon = as.Date(format(mon, "%d-%m-%Y"), format = "%d-%m-%Y")) %>% 
+  ggplot(aes(mon, spending, color = category)) + 
   geom_line() +
   geom_point() + 
-  scale_x_continuous(labels=label_month) + 
+  scale_x_date(labels = scales::date_format("%b %Y")) + 
   scale_y_continuous(labels=scales::dollar_format()) + 
   scale_color_brewer(palette = "Paired") + 
   labs(
@@ -180,11 +180,27 @@ debits %>%
     color = NULL, 
     x = "Month",
     y = "Spent"
-  ) + 
-  theme_minimal()
+  )
 ```
 ```{r}
-RColorBrewer::display.brewer.all()
+s <- sum(debits %>% pull(debit))
+debits %>% 
+  group_by(category) %>% 
+  summarize(spending = sum(debit)) %>% 
+  arrange(desc(category)) %>% 
+  mutate(prop = spending / s * 100) %>% 
+  mutate(ypos = cumsum(prop) - 0.5 * prop) %>% 
+  ggplot(aes(x = "", y = prop, fill = category)) + 
+  geom_bar(stat = "identity", width = 1, color = "white") + 
+  ggrepel::geom_label_repel(
+    aes(y = ypos, label = category), 
+    color = "white", 
+    size = 3
+  ) + 
+  coord_polar("y", start = 0) + 
+  labs(title = "Proportion of Spending by Category", fill = NULL) + 
+  theme_void() + 
+  theme(legend.position = "none")
 ```
 
 
