@@ -1,0 +1,186 @@
+---
+title: Callan's Budget
+author: Callan Hoskins
+date: "`r Sys.Date()`"
+output: 
+  github_document:
+    toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning=FALSE, message=FALSE)
+```
+
+```{r message=FALSE, warning=FALSE}
+# Packages
+library(tidyverse)
+library(lubridate)
+
+# Parameters
+spreadsheet <- "./AccountHistoryMaster.csv"
+#===============================================================================
+
+# Code
+debits <- 
+  read_csv(spreadsheet) %>% 
+  transmute(
+    post_date = parse_date(`Post Date`, "%m/%d/%Y"), 
+    debit = Debit, 
+    desc = Description, 
+    category = Category
+  )
+
+budget <- 
+  tribble(
+    ~category, ~yearly, 
+    "Home", 1e3, 
+    "Gifts", 2e3, 
+    "Food", 5.7e3, 
+    "Transportation", 2e3, 
+    "Charity", 1e3, 
+    "Rent", 21.6e3, 
+    "Savings", 5e3, 
+    "Stocks", 20e3, 
+    "General", 11.4e3, 
+    "Utilities", 2520, 
+    "Travel", 3.6e3, 
+    "Healthcare", 1e3
+  ) %>% 
+  mutate(weekly = yearly / 52, monthly = yearly / 12)
+```
+
+```{r}
+debits <- 
+  debits %>% 
+  mutate(
+    weekday = post_date %>% wday(label = TRUE, abbr = FALSE), 
+    week = post_date - (wday(post_date)), 
+    month = post_date %>% month(label = TRUE, abbr = FALSE)
+  )
+```
+
+```{r}
+first_date <- 
+  debits %>% 
+  pull(post_date) %>% 
+  min()
+
+last_date <- 
+  debits %>% 
+  pull(post_date) %>% 
+  max()
+
+weeks_elapsed <- as.double(difftime(last_date, first_date, units = "weeks"))
+
+debits %>% 
+  group_by(category) %>% 
+  summarize(spending = sum(debit)) %>% 
+  transmute(category, weekly = spending / weeks_elapsed, amount = "Spent") %>% 
+  bind_rows(
+    budget %>% transmute(category, weekly, amount = "Budget")
+  ) %>% 
+  mutate(spent_str = scales::dollar_format(largest_with_cents = 0)(weekly)) %>% 
+  ggplot(aes(category, weekly, label = spent_str, fill = amount)) + 
+  geom_col(position = "dodge") + 
+  geom_text() + 
+  scale_y_continuous(labels=scales::dollar_format()) + 
+  scale_fill_manual(values = c("#2D7B17", "#EE1300")) + 
+  labs(
+    x = NULL, 
+    y = "Weekly Spending", 
+    fill = NULL, 
+    title = "Average Weekly Spending This Year"
+  ) + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+```{r}
+yearly_budget <- 
+  budget %>% 
+  pull(yearly) %>% 
+  sum()
+
+yearly_spent <- 
+  debits %>% 
+  pull(debit) %>% 
+  sum()
+
+deficit <- (yearly_budget * weeks_elapsed / 52) - yearly_spent
+```
+
+Your yearly deficit so far is $`r deficit`, or `r deficit / (yearly_budget * weeks_elapsed / 52)`%.  
+
+```{r}
+debits %>% 
+  group_by(category) %>% 
+  summarize(spending = sum(debit)) %>% 
+  right_join(budget, by = "category") %>% 
+  replace(is.na(.), 0) %>% 
+  mutate(spending = spending / yearly) %>% 
+  ggplot(aes(category, spending)) + 
+  geom_col(fill = "#BA65A3") + 
+  geom_abline(intercept = weeks_elapsed / 52, slope = 0, color = "red") + 
+  geom_abline(intercept = 1, slope = 0) + 
+  scale_y_continuous(labels = scales::label_percent()) + 
+  labs(
+    x = NULL, 
+    y = "Yearly spending (% of budget)", 
+    fill = NULL, 
+    title = "Budget Progress (%)"
+  ) + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+```{r}
+monthh <- "December"
+last_month <- debits %>% filter(month == monthh)
+last_month %>% 
+  group_by(category) %>% 
+  summarize(spending = sum(debit)) %>% 
+  transmute(category, monthly = spending, amount = "Spent") %>% 
+  bind_rows(
+    budget %>% transmute(category, monthly, amount = "Budget")
+  ) %>% 
+  mutate(spent_str = scales::dollar_format(largest_with_cents = 0)(monthly)) %>% 
+  ggplot(aes(category, monthly, label = spent_str, fill = amount)) + 
+  geom_col(position = "dodge") + 
+  geom_text() + 
+  scale_y_continuous(labels=scales::dollar_format()) + 
+  scale_fill_manual(values = c("#2D7B17", "#EE1300")) + 
+  labs(
+    x = NULL, 
+    y = "Spent", 
+    fill = NULL, 
+    title = str_c(monthh, " Spending")
+  ) + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+```{r}
+# The label function is no longer correct
+label_month <- function(month) {
+  str_c(month, "-", today() %>% year())
+}
+
+debits %>% 
+  mutate(month = post_date %>% month()) %>% 
+  group_by(month, category) %>% 
+  summarize(spending = sum(debit)) %>% 
+  ggplot(aes(month, spending, color=category)) + 
+  geom_line() +
+  geom_point() + 
+  scale_x_continuous(labels=label_month) + 
+  scale_y_continuous(labels=scales::dollar_format()) + 
+  scale_color_brewer(palette = "Paired") + 
+  labs(
+    title = "Spending by Category Over Time", 
+    color = NULL, 
+    x = "Month",
+    y = "Spent"
+  ) + 
+  theme_minimal()
+```
+```{r}
+RColorBrewer::display.brewer.all()
+```
+
+
