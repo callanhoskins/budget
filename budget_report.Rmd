@@ -71,9 +71,6 @@ last_date <-
   pull(post_date) %>% 
   max()
 
-debits %>% 
-  filter(is.na(category))
-
 weeks_elapsed <- as.double(difftime(last_date, first_date, units = "weeks"))
 
 debits %>% 
