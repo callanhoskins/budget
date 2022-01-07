@@ -161,7 +161,7 @@ debits %>%
            post_date %>% 
            floor_date(unit = "month") %>% 
            as.Date(format(mon, "%d-%m-%Y"), format = "%d-%m-%Y")
-         ) %>% 
+  ) %>% 
   group_by(mon, category) %>% 
   summarize(spending = sum(debit)) %>% 
   mutate(mon = as.Date(format(mon, "%d-%m-%Y"), format = "%d-%m-%Y")) %>% 
@@ -179,14 +179,24 @@ debits %>%
   )
 ```
 ```{r}
+s <- sum(debits %>% pull(debit))
 debits %>% 
   group_by(category) %>% 
   summarize(spending = sum(debit)) %>% 
-  ggplot(aes(x = "", y = spending, fill = category)) + 
+  arrange(desc(category)) %>% 
+  mutate(prop = spending / s * 100) %>% 
+  mutate(ypos = cumsum(prop) - 0.5 * prop) %>% 
+  ggplot(aes(x = "", y = prop, fill = category)) + 
   geom_bar(stat = "identity", width = 1, color = "white") + 
-  coord_polar("y", start = 1) + 
+  ggrepel::geom_label_repel(
+    aes(y = ypos, label = category), 
+    color = "white", 
+    size = 3
+  ) + 
+  coord_polar("y", start = 0) + 
   labs(title = "Proportion of Spending by Category", fill = NULL) + 
-  theme_void()
+  theme_void() + 
+  theme(legend.position = "none")
 ```
 
 
