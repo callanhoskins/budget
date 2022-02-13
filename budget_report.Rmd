@@ -60,6 +60,7 @@ debits <-
   )
 ```
 
+
 ```{r}
 first_date <- 
   debits %>% 
@@ -133,7 +134,7 @@ debits %>%
 ```
 
 ```{r}
-monthh <- "December"
+monthh <- "January"
 last_month <- debits %>% filter(month == monthh)
 last_month %>% 
   group_by(category) %>% 
