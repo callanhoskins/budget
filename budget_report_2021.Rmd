@@ -1,5 +1,5 @@
 ---
-title: Callan's Budget
+title: "Callan's Budget 2021"
 author: Callan Hoskins
 date: "`r Sys.Date()`"
 output: 
@@ -17,7 +17,7 @@ library(tidyverse)
 library(lubridate)
 
 # Parameters
-spreadsheet <- "./AccountHistoryMaster.csv"
+spreadsheet <- "./AccountHistoryMaster_2021.csv"
 #===============================================================================
 
 # Code
