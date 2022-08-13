@@ -61,6 +61,7 @@ debits <-
 ```
 
 
+
 ```{r}
 first_date <- 
   debits %>% 
@@ -135,7 +136,7 @@ debits %>%
 ```
 
 ```{r}
-monthh <- "January"
+monthh <- "March"
 last_month <- debits %>% filter(month == monthh)
 last_month %>% 
   group_by(category) %>% 
@@ -171,6 +172,7 @@ debits %>%
   ggplot(aes(mon, spending, color = category)) + 
   geom_line() +
   geom_point() + 
+  coord_cartesian(ylim = c(0, 3e3)) + 
   scale_x_date(labels = scales::date_format("%b %Y")) + 
   scale_y_continuous(labels=scales::dollar_format()) + 
   scale_color_brewer(palette = "Paired") + 
