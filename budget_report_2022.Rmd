@@ -17,15 +17,15 @@ library(tidyverse)
 library(lubridate)
 
 # Parameters
-spreadsheet <- "./data/AccountHistoryMaster_2021.csv"
+spreadsheet <- "./data/Chase1821_Activity20220101_20220812_20220812.CSV"
 #===============================================================================
 
 # Code
-debits <- 
+amounts <- 
   read_csv(spreadsheet) %>% 
   transmute(
-    post_date = parse_date(`Post Date`, "%m/%d/%Y"), 
-    debit = Debit, 
+    transaction_date = parse_date(`Transaction Date`, "%m/%d/%Y"), 
+    amount = Amount, 
     desc = Description, 
     category = Category
   )
@@ -51,12 +51,12 @@ budget <-
 ```
 
 ```{r}
-debits <- 
-  debits %>% 
+amounts <- 
+  amounts %>% 
   mutate(
-    weekday = post_date %>% wday(label = TRUE, abbr = FALSE), 
-    week = post_date - (wday(post_date)), 
-    month = post_date %>% month(label = TRUE, abbr = FALSE)
+    weekday = transaction_date %>% wday(label = TRUE, abbr = FALSE), 
+    week = transaction_date - (wday(transaction_date)), 
+    month = transaction_date %>% month(label = TRUE, abbr = FALSE)
   )
 ```
 
@@ -64,20 +64,20 @@ debits <-
 
 ```{r}
 first_date <- 
-  debits %>% 
-  pull(post_date) %>% 
+  amounts %>% 
+  pull(transaction_date) %>% 
   min()
 
 last_date <- 
-  debits %>% 
-  pull(post_date) %>% 
+  amounts %>% 
+  pull(transaction_date) %>% 
   max()
 
 weeks_elapsed <- as.double(difftime(last_date, first_date, units = "weeks"))
 
-debits %>% 
+amounts %>% 
   group_by(category) %>% 
-  summarize(spending = sum(debit)) %>% 
+  summarize(spending = sum(amount)) %>% 
   transmute(category, weekly = spending / weeks_elapsed, amount = "Spent") %>% 
   bind_rows(
     budget %>% transmute(category, weekly, amount = "Budget")
@@ -105,8 +105,8 @@ yearly_budget <-
   sum()
 
 yearly_spent <- 
-  debits %>% 
-  pull(debit) %>% 
+  amounts %>% 
+  pull(amount) %>% 
   sum()
 
 deficit <- (yearly_budget * weeks_elapsed / 52) - yearly_spent
@@ -115,9 +115,9 @@ deficit <- (yearly_budget * weeks_elapsed / 52) - yearly_spent
 Your yearly deficit so far is $`r deficit`, or `r deficit / (yearly_budget * weeks_elapsed / 52)`%.  
 
 ```{r}
-debits %>% 
+amounts %>% 
   group_by(category) %>% 
-  summarize(spending = sum(debit)) %>% 
+  summarize(spending = sum(amount)) %>% 
   right_join(budget, by = "category") %>% 
   replace(is.na(.), 0) %>% 
   mutate(spending = spending / yearly) %>% 
@@ -137,10 +137,10 @@ debits %>%
 
 ```{r}
 monthh <- "March"
-last_month <- debits %>% filter(month == monthh)
+last_month <- amounts %>% filter(month == monthh)
 last_month %>% 
   group_by(category) %>% 
-  summarize(spending = sum(debit)) %>% 
+  summarize(spending = sum(amount)) %>% 
   transmute(category, monthly = spending, amount = "Spent") %>% 
   bind_rows(
     budget %>% transmute(category, monthly, amount = "Budget")
@@ -160,14 +160,14 @@ last_month %>%
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 ```{r}
-debits %>% 
+amounts %>% 
   mutate(mon = 
-           post_date %>% 
+           transaction_date %>% 
            floor_date(unit = "month") %>% 
            as.Date(format(mon, "%d-%m-%Y"), format = "%d-%m-%Y")
   ) %>% 
   group_by(mon, category) %>% 
-  summarize(spending = sum(debit)) %>% 
+  summarize(spending = sum(amount)) %>% 
   mutate(mon = as.Date(format(mon, "%d-%m-%Y"), format = "%d-%m-%Y")) %>% 
   ggplot(aes(mon, spending, color = category)) + 
   geom_line() +
@@ -184,10 +184,10 @@ debits %>%
   )
 ```
 ```{r}
-s <- sum(debits %>% pull(debit))
-debits %>% 
+s <- sum(amounts %>% pull(amount))
+amounts %>% 
   group_by(category) %>% 
-  summarize(spending = sum(debit)) %>% 
+  summarize(spending = sum(amount)) %>% 
   arrange(desc(category)) %>% 
   mutate(prop = spending / s * 100) %>% 
   mutate(
