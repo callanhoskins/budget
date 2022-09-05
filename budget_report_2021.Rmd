@@ -206,5 +206,11 @@ debits %>%
   theme_void() + 
   theme(legend.position = "none")
 ```
+```{r}
+debits %>% 
+  group_by(category) %>% 
+  summarize(cum_sum = sum(debit), weekly = sum(debit) / 52, monthly = sum(debit) / 12) %>% 
+  ungroup()
+```
 
 

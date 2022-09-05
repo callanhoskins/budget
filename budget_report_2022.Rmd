@@ -17,7 +17,7 @@ library(tidyverse)
 library(lubridate)
 
 # Parameters
-spreadsheet <- "./data/Chase1821_Activity20220101_20220812_20220812.CSV"
+spreadsheet <- "./data/chase_activity.csv"
 #===============================================================================
 
 # Code
@@ -33,33 +33,51 @@ amounts <-
 budget <- 
   tribble(
     ~category, ~yearly, 
-    "Home", 1e3, 
+    "Home", 3e3, 
     "Gifts", 2e3, 
-    "Food", 5.7e3, 
-    "Transportation", 2e3, 
-    "Charity", 1e3, 
-    "Rent", 21.6e3, 
+    "Food & Drink", 7.5e3, 
+    "Transportation", 3e3, 
+    "Charity", 2e3, 
+    "Rent", 37.2e3, 
     "Savings", 5e3, 
     "Investments", 20e3, 
     "General", 11.4e3, 
-    "Utilities", 2520, 
-    "Travel", 3.6e3, 
-    "Healthcare", 1e3, 
+    "Bills & Utilities", 1200, 
+    "Travel", 2.5e3, 
+    "Health & Wellness", 2e3, 
     "Taxes", 43e3
   ) %>% 
   mutate(weekly = yearly / 52, monthly = yearly / 12)
 ```
 
 ```{r}
+map_categories <- function(category, description) {
+  case_when(
+    category == "Groceries" ~ "Food & Drink", 
+    category == "Gas" ~ "Transportation", 
+    category == "Professional Services" ~ "General", 
+    category == "Shopping" ~ "General", 
+    category == "Entertainment" ~ "General", 
+    category == "Personal" ~ "General", 
+    str_detect(description, "NYCT PAYGO") ~ "Transportation", 
+    str_detect(description, "LYFT") ~ "Transportation", 
+    str_detect(description, "CITIBIK") ~ "Transportation", 
+    str_detect(description, "BUS") ~ "Transportation", 
+    TRUE ~ category
+  )
+}
+
 amounts <- 
   amounts %>% 
+  filter(!is.na(category) & category != "Fees & Adjustments") %>% # Remove payments, which are NA
   mutate(
     weekday = transaction_date %>% wday(label = TRUE, abbr = FALSE), 
     week = transaction_date - (wday(transaction_date)), 
-    month = transaction_date %>% month(label = TRUE, abbr = FALSE)
+    month = transaction_date %>% month(label = TRUE, abbr = FALSE), 
+    category = map_categories(category, desc), 
+    amount = -1*amount
   )
 ```
-
 
 
 ```{r}
